@@ -1,0 +1,23 @@
+task_id: requires-review-sensitive-file-001
+project: headroom
+workspace: .
+provider: headroom
+sandbox: workspace-write
+mode: implementation
+goal: 创建一个受控的 scratch token 文件，用于验证敏感文件命名触发 status=requires_review
+context:
+  - 当前任务用于验证 sensitive_files 安全拦截
+  - 文件位于 .agentops/scratch/fake-token-review-test.txt，不包含真实密钥
+constraints:
+  - 只创建 .agentops/scratch/fake-token-review-test.txt
+  - 文件内容只能写 fake token review test，不写任何真实密钥
+  - 不提交 commit
+expected_output:
+  - sensitive_file_review_detected
+verification:
+  - codex_exit_code_must_be_0
+  - requires_review_expected
+max_changed_files: 5
+verification_commands:
+  - test -f .agentops/scratch/fake-token-review-test.txt
+  - grep -q 'fake token review test' .agentops/scratch/fake-token-review-test.txt

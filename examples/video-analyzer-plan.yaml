@@ -1,0 +1,11 @@
+plan_id: video-analyzer-plan-001
+project: video-analyzer
+workspace: .
+stop_on_failure: true
+tasks:
+  - task_id: video-analyzer-plan-step1-cli-entry
+    task_file: video-analyzer-plan-step1.task.yaml
+  - task_id: video-analyzer-plan-step2-call-chain
+    task_file: video-analyzer-plan-step2.task.yaml
+    depends_on:
+      - video-analyzer-plan-step1-cli-entry

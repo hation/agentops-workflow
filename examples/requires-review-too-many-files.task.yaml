@@ -1,0 +1,26 @@
+task_id: requires-review-too-many-files-001
+project: headroom
+workspace: .
+provider: headroom
+sandbox: workspace-write
+mode: implementation
+goal: 创建两个 scratch 文件，用于验证 changed_files 超过 max_changed_files 时 status=requires_review
+context:
+  - 当前任务用于验证安全拦截
+  - 只允许创建 .agentops/scratch/too-many-files-a.md 和 .agentops/scratch/too-many-files-b.md
+constraints:
+  - 创建 .agentops/scratch/too-many-files-a.md，内容包含 too many files review test
+  - 创建 .agentops/scratch/too-many-files-b.md，内容包含 too many files review test
+  - 不修改其他文件
+  - 不提交 commit
+expected_output:
+  - too_many_files_created
+verification:
+  - codex_exit_code_must_be_0
+  - requires_review_expected
+max_changed_files: 1
+verification_commands:
+  - test -f .agentops/scratch/too-many-files-a.md
+  - test -f .agentops/scratch/too-many-files-b.md
+  - grep -q 'too many files review test' .agentops/scratch/too-many-files-a.md
+  - grep -q 'too many files review test' .agentops/scratch/too-many-files-b.md

@@ -1,0 +1,25 @@
+# AgentOps Task: hello-agentops-live
+# 由 agentops-new.py 生成，按需修改后交给 agentops-dispatch-codex.py 执行
+
+task_id: hello-agentops-live
+project: headroom
+workspace: .
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: |
+  用 5 条 bullet 总结当前 AgentOps 项目的脚本目录、文档目录和任务记录目录；不要修改任何文件
+context:
+  []
+constraints:
+  - 不修改 .pilotdeck/ 目录
+  - 不修改 .agentops/ 目录
+  - git_diff_must_be_empty
+
+expected_output:
+  - summary
+
+verification:
+  - codex_exit_code_must_be_0
+  - git_diff_must_be_empty
+

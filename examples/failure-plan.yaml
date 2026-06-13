@@ -1,0 +1,11 @@
+plan_id: failure-plan-001
+project: headroom
+workspace: .
+stop_on_failure: true
+tasks:
+  - task_id: failure-verification-command-001
+    task_file: failure-verification-command.task.yaml
+  - task_id: video-analyzer-plan-step1-cli-entry
+    task_file: video-analyzer-plan-step1.task.yaml
+    depends_on:
+      - failure-verification-command-001

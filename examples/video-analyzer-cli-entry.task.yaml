@@ -1,0 +1,24 @@
+task_id: video-analyzer-cli-entry-001
+project: video-analyzer
+workspace: /path/to/your/video-analyzer
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: 分析 CLI 入口和主要调用链，并用 5 条 bullet 总结
+context:
+  - 当前任务用于验证 Trae -> AgentOps Task Packet -> Codex 的只读编排链路
+  - 目标项目已经通过 Codex headroom provider 做过人工触发的只读分析
+  - 本次需要由 agentops-dispatch-codex.py 标准化调用 Codex 并落盘结果
+constraints:
+  - 不修改任何文件
+  - 先查看项目文件再回答
+  - 必须说明 CLI 入口在哪里
+  - 必须说明主要调用链
+  - 最终只输出 5 条 bullet
+expected_output:
+  - cli_entry
+  - main_call_chain
+  - five_bullets
+verification:
+  - codex_exit_code_must_be_0
+  - git_diff_must_be_empty

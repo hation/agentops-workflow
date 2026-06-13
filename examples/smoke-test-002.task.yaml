@@ -1,0 +1,25 @@
+# AgentOps Task: smoke-test-002
+# 由 agentops-new.py 生成，按需修改后交给 agentops-dispatch-codex.py 执行
+
+task_id: smoke-test-002
+project: headroom
+workspace: .
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: |
+  列出这个项目的根目录文件结构，只读，不做任何修改
+context:
+  - 由 agentops-new.py 自动生成，可自由增删
+constraints:
+  - 不修改 .pilotdeck/ 目录
+  - 不修改 .agentops/ 目录
+  - git_diff_must_be_empty
+
+expected_output:
+  - summary
+
+verification:
+  - codex_exit_code_must_be_0
+  - git_diff_must_be_empty
+

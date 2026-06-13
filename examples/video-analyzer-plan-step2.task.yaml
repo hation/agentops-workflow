@@ -1,0 +1,21 @@
+task_id: video-analyzer-plan-step2-call-chain
+project: video-analyzer
+workspace: /path/to/your/video-analyzer
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: 基于 CLI 入口继续分析主要调用链，输出 5 条 bullet
+context:
+  - 当前任务是多任务 plan 的第二个任务
+  - 该任务依赖 step1 的 CLI 入口分析成功
+constraints:
+  - 不修改任何文件
+  - 查看 video_analyzer/cli.py 和主要处理模块
+  - 最终输出 5 条 bullet
+expected_output:
+  - main_call_chain
+  - processing_stages
+  - output_files
+verification:
+  - codex_exit_code_must_be_0
+  - git_diff_must_be_empty

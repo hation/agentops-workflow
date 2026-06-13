@@ -1,0 +1,21 @@
+task_id: video-analyzer-plan-step1-cli-entry
+project: video-analyzer
+workspace: /path/to/your/video-analyzer
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: 分析 video-analyzer 的 CLI 入口，输出 3 条 bullet
+context:
+  - 当前任务是多任务 plan 的第一个任务
+  - 只需要确认 CLI 入口和入口函数
+constraints:
+  - 不修改任何文件
+  - 先查看 setup.py 和 video_analyzer/cli.py
+  - 最终输出 3 条 bullet
+expected_output:
+  - cli_entry
+  - entry_function
+  - packaging_mapping
+verification:
+  - codex_exit_code_must_be_0
+  - git_diff_must_be_empty

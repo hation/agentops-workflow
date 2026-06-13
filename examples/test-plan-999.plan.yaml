@@ -1,0 +1,18 @@
+# AgentOps Plan: test-plan-999
+# 由 agentops-new.py 生成，按需修改后交给 agentops-dispatch-plan.py 执行
+
+plan_id: test-plan-999
+project: headroom
+workspace: .
+stop_on_failure: true
+tasks:
+  - task_id: step1
+    task_file: step1.task.yaml
+  - task_id: step2
+    task_file: step2.task.yaml
+    depends_on:
+      - step1
+  - task_id: step3
+    task_file: step3.task.yaml
+    depends_on:
+      - step2

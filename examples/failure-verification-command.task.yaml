@@ -1,0 +1,20 @@
+task_id: failure-verification-command-001
+project: headroom
+workspace: .
+provider: headroom
+sandbox: read-only
+mode: analysis
+goal: 生成一个会在 verification_commands 阶段失败的只读任务，用于验证 status=failed
+context:
+  - 当前任务用于验证失败路径
+  - Codex 不需要修改文件
+constraints:
+  - 不修改任何文件
+  - 简短输出验证失败路径即可
+expected_output:
+  - failure_path_exercised
+verification:
+  - codex_exit_code_must_be_0
+  - verification_commands_must_fail
+verification_commands:
+  - test -f .agentops/scratch/file-that-should-not-exist-for-failure-test.md

@@ -1,0 +1,27 @@
+task_id: headroom-agentops-scratch-note-001
+project: headroom
+workspace: .
+provider: headroom
+sandbox: workspace-write
+mode: implementation
+goal: 创建一个低风险 scratch 文档，用于验证 workspace-write 调度和 verification_commands
+context:
+  - 当前任务用于验证 agentops-dispatch-codex.py 的 workspace-write MVP
+  - 只允许创建 .agentops/scratch/workspace-write-smoke.md
+  - 不要修改任何已有源代码、脚本或配置文件
+constraints:
+  - 只创建或更新 .agentops/scratch/workspace-write-smoke.md
+  - 文件内容必须包含 AgentOps workspace-write smoke test
+  - 不要提交 commit
+  - 不要修改 examples、脚本、架构文档或任务运行目录之外的文件
+expected_output:
+  - created_scratch_note
+  - verification_commands_ready
+verification:
+  - codex_exit_code_must_be_0
+  - verification_commands_must_pass
+  - changed_files_must_not_exceed_limit
+max_changed_files: 1
+verification_commands:
+  - test -f .agentops/scratch/workspace-write-smoke.md
+  - grep -q 'AgentOps workspace-write smoke test' .agentops/scratch/workspace-write-smoke.md
