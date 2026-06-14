@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+import argparse
+import re
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+AGENTOPS_DIR = ROOT_DIR / "agentops"
+DEFAULT_AUDIT_GOAL = "总结当前项目的目录结构、技术栈、启动方式、测试方式、关键配置和潜在风险。"
+
+
+def slugify(value):
+    text = re.sub(r"[^A-Za-z0-9_-]+", "-", value.strip().lower())
+    text = re.sub(r"-+", "-", text).strip("-")
+    return text or "workspace"
+
+
+def timestamp():
+    return datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def run_command(args, cwd=ROOT_DIR):
+    return subprocess.run(args, cwd=str(cwd), text=True)
+
+
+def ensure_workspace(path):
+    workspace = Path(path).expanduser().resolve()
+    if not workspace.exists() or not workspace.is_dir():
+        raise ValueError(f"workspace 不存在或不是目录: {workspace}")
+    return workspace
+
+
+def task_file_for(task_id):
+    path = ROOT_DIR / ".agentops" / "quick" / f"{task_id}.task.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def make_task_id(prefix, workspace):
+    return f"{prefix}-{slugify(workspace.name)}-{timestamp()}"
+
+
+def create_task(task_id, workspace, goal, sandbox, mode):
+    out = task_file_for(task_id)
+    cmd = [
+        sys.executable,
+        str(AGENTOPS_DIR / "agentops-new.py"),
+        "--force",
+        "--workspace",
+        str(workspace),
+        "--out",
+        str(out),
+        "task",
+        task_id,
+        "--sandbox",
+        sandbox,
+        "--mode",
+        mode,
+        "--goal",
+        goal,
+    ]
+    result = run_command(cmd)
+    if result.returncode != 0:
+        return result.returncode, out
+    return 0, out
+
+
+def dispatch_task(task_file):
+    return run_command([sys.executable, str(AGENTOPS_DIR / "agentops-dispatch-codex.py"), str(task_file)]).returncode
+
+
+def read_task(task_id, summary=True):
+    cmd = [sys.executable, str(AGENTOPS_DIR / "agentops-read-result.py"), task_id]
+    if summary:
+        cmd.append("--summary")
+    return run_command(cmd).returncode
+
+
+def cmd_do(args, prefix, sandbox, mode, default_goal=None):
+    try:
+        workspace = ensure_workspace(args.workspace)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    goal = args.goal or default_goal
+    if not goal:
+        print("ERROR: 需要提供 goal", file=sys.stderr)
+        return 2
+    task_id = args.task_id or make_task_id(prefix, workspace)
+    print(f"workspace: {workspace}")
+    print(f"task_id: {task_id}")
+    code, task_file = create_task(task_id, workspace, goal, sandbox, mode)
+    if code != 0:
+        return code
+    print(f"task_file: {task_file}")
+    code = dispatch_task(task_file)
+    if code != 0:
+        return code
+    return read_task(task_id, summary=not args.no_summary)
+
+
+def cmd_doctor(_args):
+    return run_command(["bash", str(ROOT_DIR / "scripts" / "check-agentops-stack.sh")]).returncode
+
+
+def cmd_last(args):
+    if args.local:
+        workspace = ensure_workspace(args.workspace)
+        tasks_dir = workspace / ".pilotdeck" / "tasks"
+        if not tasks_dir.exists():
+            print(f"no PilotDeck task records found in: {tasks_dir}")
+            return 1
+        candidates = [path for path in tasks_dir.iterdir() if path.is_dir() and (path / "summary.md").exists()]
+        if not candidates:
+            print(f"no PilotDeck task summaries found in: {tasks_dir}")
+            return 1
+        latest = max(candidates, key=lambda path: (path / "summary.md").stat().st_mtime)
+        print(f"task_id: {latest.name}")
+        print(f"summary: {latest / 'summary.md'}")
+        print((latest / "summary.md").read_text(encoding="utf-8").rstrip())
+        return 0
+    cmd = [sys.executable, str(AGENTOPS_DIR / "agentops-read-result.py"), "--latest"]
+    if not args.no_summary:
+        cmd.append("--summary")
+    return run_command(cmd).returncode
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(description="Run AgentOps from any workspace")
+    parser.add_argument("--workspace", default=".", help="Target workspace, default: current directory")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    doctor = subparsers.add_parser("doctor", help="Check AgentOps stack")
+    doctor.set_defaults(func=cmd_doctor)
+
+    audit = subparsers.add_parser("audit", help="Run default read-only project audit")
+    audit.add_argument("--task-id", help="Custom task id")
+    audit.add_argument("--no-summary", action="store_true", help="Do not print summary content")
+    audit.set_defaults(func=lambda args: cmd_do(args, "audit", "read-only", "analysis", DEFAULT_AUDIT_GOAL))
+
+    run = subparsers.add_parser("run", help="Run a custom read-only analysis")
+    run.add_argument("goal", help="Analysis goal")
+    run.add_argument("--task-id", help="Custom task id")
+    run.add_argument("--no-summary", action="store_true", help="Do not print summary content")
+    run.set_defaults(func=lambda args: cmd_do(args, "run", "read-only", "analysis"))
+
+    fix = subparsers.add_parser("fix", help="Run a workspace-write task")
+    fix.add_argument("goal", help="Change goal")
+    fix.add_argument("--task-id", help="Custom task id")
+    fix.add_argument("--no-summary", action="store_true", help="Do not print summary content")
+    fix.set_defaults(func=lambda args: cmd_do(args, "fix", "workspace-write", "change"))
+
+    last = subparsers.add_parser("last", help="Read latest AgentOps result")
+    last.add_argument("--local", action="store_true", help="Read latest .pilotdeck/tasks record in workspace")
+    last.add_argument("--no-summary", action="store_true", help="Do not print summary content")
+    last.set_defaults(func=cmd_last)
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

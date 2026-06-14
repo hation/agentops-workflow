@@ -33,38 +33,57 @@ tests/                 pytest 测试
 ## 安装
 
 ```bash
+git clone https://github.com/hation/agentops-workflow.git
+cd agentops-workflow
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+建议把全局入口加入 `PATH`：
+
+```bash
+export PATH="$PWD/bin:$PATH"
+```
+
+也可以创建软链：
+
+```bash
+ln -sf "$PWD/bin/agentops" /usr/local/bin/agentops
+```
+
 ## 快速开始
 
-检查服务状态：
+在任意目标项目目录中运行：
 
 ```bash
-bash scripts/check-agentops-stack.sh
+agentops doctor
+agentops audit
 ```
 
-生成只读任务：
+自定义只读分析：
 
 ```bash
-python3 agentops/agentops-new.py \
-  --out examples/check-project.task.yaml \
-  task check-project \
-  --goal "总结当前项目的脚本目录、文档目录和任务记录目录"
+agentops run "分析当前项目的登录流程和权限校验逻辑"
 ```
 
-执行任务：
+允许修改当前项目：
 
 ```bash
-python3 agentops/agentops-dispatch-codex.py examples/check-project.task.yaml
+agentops fix "修复 README 中过期的启动命令"
 ```
 
-查看结果：
+查看最近结果：
 
 ```bash
-python3 agentops/agentops-read-result.py check-project
+agentops last
+agentops last --local
+```
+
+如果没有配置全局入口，也可以从工具仓库直接运行：
+
+```bash
+/path/to/agentops-workflow/bin/agentops --workspace /path/to/target-project audit
 ```
 
 ## 任务记录
