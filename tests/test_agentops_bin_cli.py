@@ -64,6 +64,38 @@ def test_fix_uses_workspace_write(monkeypatch, tmp_path):
     assert calls == [("fix-demo", tmp_path.resolve(), "修复 README", "workspace-write", "change")]
 
 
+def test_deploy_creates_read_only_plan_task(monkeypatch, tmp_path):
+    cli = load_cli()
+    calls = []
+
+    def fake_create_task(task_id, workspace, goal, sandbox, mode):
+        calls.append((task_id, workspace, goal, sandbox, mode))
+        task_file = tmp_path / f"{task_id}.task.yaml"
+        task_file.write_text("task", encoding="utf-8")
+        return 0, task_file
+
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "create_task", fake_create_task)
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "dispatch_task", lambda task_file: 0)
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "read_task", lambda task_id, summary=True: 0)
+    args = type("Args", (), {"workspace": ".", "target": str(tmp_path), "task_id": "deploy-demo", "no_summary": True, "auto_local": False, "plan_only": True})()
+    assert cli["cmd_deploy"](args) == 0
+    assert calls[0][0] == "deploy-demo"
+    assert calls[0][1] == tmp_path.resolve()
+    assert calls[0][3] == "read-only"
+    assert calls[0][4] == "analysis"
+    assert "拆解部署准备任务" in calls[0][2]
+
+
+def test_deploy_auto_local_still_stops_after_plan(monkeypatch, tmp_path, capsys):
+    cli = load_cli()
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "create_task", lambda task_id, workspace, goal, sandbox, mode: (0, tmp_path / "task.yaml"))
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "dispatch_task", lambda task_file: 0)
+    monkeypatch.setitem(cli["cmd_deploy"].__globals__, "read_task", lambda task_id, summary=True: 0)
+    args = type("Args", (), {"workspace": str(tmp_path), "target": None, "task_id": "deploy-demo", "no_summary": True, "auto_local": True, "plan_only": False})()
+    assert cli["cmd_deploy"](args) == 0
+    assert "不会自动修改文件" in capsys.readouterr().out
+
+
 def test_last_local_reads_latest_pilotdeck_summary(tmp_path, capsys):
     cli = load_cli()
     tasks = tmp_path / ".pilotdeck" / "tasks"

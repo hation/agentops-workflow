@@ -17,7 +17,7 @@ provider: headroom
 sandbox: {sandbox}
 mode: {mode}
 goal: |
-  {goal}
+{goal}
 context:
 {context_block}
 constraints:
@@ -111,6 +111,10 @@ def render_context_block(items):
     return "\n".join(f"  - {item}" for item in items)
 
 
+def render_literal_block(text):
+    return "\n".join(f"  {line}" if line else "" for line in str(text).splitlines())
+
+
 def render_task(args):
     context_items = generate_auto_context() if args.auto_context else []
     return TASK_TEMPLATE.format(
@@ -119,7 +123,7 @@ def render_task(args):
         workspace=args.workspace,
         sandbox=args.sandbox,
         mode=args.mode,
-        goal=args.goal or "描述该任务的目标（一两句话）",
+        goal=render_literal_block(args.goal or "描述该任务的目标（一两句话）"),
         context_block=render_context_block(context_items),
         constraints_extra=(
             "  - git_diff_must_be_empty\n"

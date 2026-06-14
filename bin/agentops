@@ -9,6 +9,21 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 AGENTOPS_DIR = ROOT_DIR / "agentops"
 DEFAULT_AUDIT_GOAL = "总结当前项目的目录结构、技术栈、启动方式、测试方式、关键配置和潜在风险。"
+DEPLOY_PLAN_GOAL = """请作为 AgentOps 部署调度系统，为当前项目拆解部署准备任务。先不要修改文件。
+
+目标：让 Trae/当前 Agent 后续可以把部署工作拆成多个小的 Codex task，逐个派发、回读和审查。
+
+请完成：
+1. 识别项目结构、技术栈、依赖管理、启动命令、配置文件、环境变量、数据存储、定时任务、日志、健康检查和测试方式；
+2. 拆解部署任务队列，每个任务必须小、可验证、可回滚；
+3. 将任务分为 A/B/C 三类：
+   A. Codex 可直接在本地 workspace-write 执行的部署准备任务；
+   B. Codex 可生成脚本/文档/模板，但不能执行真实上线的任务；
+   C. 必须人工提供服务器、密钥、账号、生产数据库或线上操作确认的任务；
+4. 每个任务包含：task_id、类别、目标、涉及文件、建议命令、验证方式、预期产物、风险点、是否需要人工确认；
+5. 最后输出“下一步建议”，给出后续可直接用于 agentops fix 的 A 类任务句。
+
+限制：不要写入真实密钥；不要连接生产数据库；不要执行真实服务器部署；不要影响线上服务；不要修改 .agentops/、.pilotdeck/ 或 .taskmaster/。"""
 
 
 def slugify(value):
@@ -105,6 +120,36 @@ def cmd_doctor(_args):
     return run_command(["bash", str(ROOT_DIR / "scripts" / "check-agentops-stack.sh")]).returncode
 
 
+def cmd_deploy(args):
+    workspace_value = args.target or args.workspace
+    try:
+        workspace = ensure_workspace(workspace_value)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
+    task_id = args.task_id or make_task_id("deploy-plan", workspace)
+    print("AgentOps deploy workflow")
+    print(f"workspace: {workspace}")
+    print(f"task_id: {task_id}")
+    print("phase: plan-only")
+    code, task_file = create_task(task_id, workspace, DEPLOY_PLAN_GOAL, "read-only", "analysis")
+    if code != 0:
+        return code
+    print(f"task_file: {task_file}")
+    code = dispatch_task(task_file)
+    if code != 0:
+        return code
+    code = read_task(task_id, summary=not args.no_summary)
+    if code != 0:
+        return code
+    if args.auto_local:
+        print("\nAUTO-LOCAL: 当前版本已完成部署任务拆解；请从 summary.md 中确认 A 类任务后，再逐条运行 agentops fix。")
+        print("安全原因：自动解析并连续执行 A 类任务将在后续版本加入，当前不会自动修改文件。")
+    else:
+        print("\nNEXT: 查看上方 A 类任务句，确认后用 agentops fix 逐项执行本地部署准备。")
+    return 0
+
+
 def cmd_last(args):
     if args.local:
         workspace = ensure_workspace(args.workspace)
@@ -151,6 +196,14 @@ def build_parser():
     fix.add_argument("--task-id", help="Custom task id")
     fix.add_argument("--no-summary", action="store_true", help="Do not print summary content")
     fix.set_defaults(func=lambda args: cmd_do(args, "fix", "workspace-write", "change"))
+
+    deploy = subparsers.add_parser("deploy", help="Split deployment work into AgentOps/Codex tasks")
+    deploy.add_argument("target", nargs="?", help="Target workspace, default: --workspace or current directory")
+    deploy.add_argument("--plan-only", action="store_true", help="Only create deployment task plan; this is the default behavior")
+    deploy.add_argument("--auto-local", action="store_true", help="Prepare for local auto execution after planning; currently stops after plan for safety")
+    deploy.add_argument("--task-id", help="Custom task id")
+    deploy.add_argument("--no-summary", action="store_true", help="Do not print summary content")
+    deploy.set_defaults(func=cmd_deploy)
 
     last = subparsers.add_parser("last", help="Read latest AgentOps result")
     last.add_argument("--local", action="store_true", help="Read latest .pilotdeck/tasks record in workspace")

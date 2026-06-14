@@ -61,6 +61,15 @@ agentops doctor
 agentops audit
 ```
 
+拆解部署任务：
+
+```bash
+agentops deploy
+agentops deploy /path/to/target-project
+```
+
+`deploy` 会内置 AgentOps 调度规则：先让 Codex 只读分析部署画像并拆解任务队列，再输出后续可交给 `agentops fix` 的本地准备任务句；涉及服务器、密钥、生产数据库或真实上线的步骤会被归类为人工确认项。
+
 自定义只读分析：
 
 ```bash
