@@ -40,7 +40,7 @@ def collect_next_action(result):
     if status == "requires_review":
         return "需要人工审查 diff.patch、changed_files 和 Codex 输出，确认是否允许继续。"
     if status == "failed":
-        return "需要先查看 codex-stderr.log、codex-stdout.log 和 result.json，修复失败原因后再重跑。"
+        return "需要先查看 result.json 和 summary.md，修复失败原因后再重跑。"
     return "状态未知，需要人工检查 run 目录。"
 
 

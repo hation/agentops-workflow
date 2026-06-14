@@ -275,7 +275,7 @@ def build_summary(task, status, codex_answer, result):
 
 ## Summary
 
-{codex_answer or '无可解析输出，请查看 codex-stdout.log 和 codex-stderr.log。'}
+{codex_answer or '无可解析输出。'}
 
 ## Checks
 
@@ -357,11 +357,7 @@ def dispatch(task_path):
         prompt,
     ]
     codex_result = run_command(codex_args, workspace)
-    write_text(run_dir / "codex-stdout.log", codex_result.stdout)
-    filtered_stderr = _filter_codex_stderr(codex_result.stderr)
-    write_text(run_dir / "codex-stderr.log", filtered_stderr)
-    if not filtered_stderr.strip():
-        (run_dir / "codex-stderr.log").unlink()
+    # 不保存 codex-stdout.log 和 codex-stderr.log（调试信息量大且价值有限）
 
     verification_commands = normalize_list(task.get("verification_commands"))
     verification_results = run_verification_commands(verification_commands, workspace, run_dir) if verification_commands else []
@@ -432,8 +428,6 @@ def dispatch(task_path):
         "output_files": {
             "task": "task.yaml",
             "prompt": "codex-prompt.md",
-            "stdout": "codex-stdout.log",
-            "stderr": "codex-stderr.log",
             "summary": "summary.md",
             "diff": "diff.patch",
             "verify": "verify.log" if verification_commands else None,
