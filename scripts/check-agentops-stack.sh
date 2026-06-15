@@ -89,10 +89,10 @@ else
   EXIT_CODE=1
 fi
 
-if grep -q 'base_url = "http://127.0.0.1:8789/v1"' "$CODEX_CONFIG"; then
-  echo "OK: Codex headroom provider 指向 8789"
+if grep -E 'base_url.*8789|base_url.*8790' "$CODEX_CONFIG"; then
+  echo "OK: Codex headroom provider 指向 Headroom 代理"
 else
-  echo "MISSING: Codex headroom provider 未指向 8789"
+  echo "MISSING: Codex headroom provider 未指向 Headroom 代理"
   EXIT_CODE=1
 fi
 
