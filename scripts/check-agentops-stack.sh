@@ -43,36 +43,37 @@ check_file() {
 
 # 核心依赖服务检查
 check_essential_port 15721 "本机火山代理"
-check_essential_port 8790 "Headroom 优化代理"
+check_essential_port 8789 "Headroom 压缩代理"
 
 # 可选服务检查
-check_optional_port 8789 "Headroom 稳定代理" "8789 端口特定的稳定代理链路"
+check_optional_port 8790 "Headroom 稳定代理" "8790 balanced 模式稳定链路"
 check_optional_port 18790 "PilotDeck Gateway" "PilotDeck 本地项目上下文服务"
 
-# Headroom 8790 模式检查
-HEADROOM_8790_PID=$(lsof -ti :8790 -sTCP:LISTEN -P -n | head -n 1 || true)
-if [ -n "$HEADROOM_8790_PID" ]; then
-  HEADROOM_8790_COMMAND=$(ps -p "$HEADROOM_8790_PID" -o command= || true)
-  HEADROOM_8790_MODE=$(echo "$HEADROOM_8790_COMMAND" | grep -Eo 'start_headroom_(fast|balanced|direct)\.py' | head -n 1 || true)
-  if [ -n "$HEADROOM_8790_MODE" ]; then
-    echo "OK: Headroom 8790 当前模式：$HEADROOM_8790_MODE"
+# Headroom 8789/8790 模式检查
+for PORT in 8789 8790; do
+  PID=$(lsof -ti :$PORT -sTCP:LISTEN -P -n | head -n 1 || true)
+  if [ -n "$PID" ]; then
+    COMMAND=$(ps -p "$PID" -o command= || true)
+    MODE=$(echo "$COMMAND" | grep -Eo 'start_headroom_(fast|balanced|direct)\.py' | head -n 1 || true)
+    if [ -n "$MODE" ]; then
+      echo "OK: Headroom $PORT 当前模式：$MODE"
+    else
+      echo "INFO: Headroom $PORT 当前模式无法识别"
+    fi
   else
-    echo "INFO: Headroom 8790 当前模式无法识别"
+    echo "INFO: Headroom $PORT 未运行"
   fi
-else
-  echo "ERROR: Headroom 8790 未运行"
-  EXIT_CODE=1
-fi
+done
 
 # 依赖文件检查
 check_file "$ORT_LINK" "ONNX Runtime 稳定软链"
 
-# Headroom 健康检查
-if curl -s http://127.0.0.1:8790/health >/dev/null 2>&1; then
-  READY=$(curl -s http://127.0.0.1:8790/health | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("ready"))' 2>/dev/null || echo "unknown")
-  echo "OK: 8790 /health 可访问，ready=$READY"
+# Headroom 健康检查（核心链路 8789）
+if curl -s http://127.0.0.1:8789/health >/dev/null 2>&1; then
+  READY=$(curl -s http://127.0.0.1:8789/health | python3 -c 'import sys,json; d=json.load(sys.stdin); print(d.get("ready"))' 2>/dev/null || echo "unknown")
+  echo "OK: 8789 /health 可访问，ready=$READY"
 else
-  echo "ERROR: 8790 /health 不可访问 - 这是核心依赖"
+  echo "ERROR: 8789 /health 不可访问 - 这是核心依赖"
   EXIT_CODE=1
 fi
 

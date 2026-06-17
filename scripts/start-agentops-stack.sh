@@ -27,13 +27,8 @@ if ! .venv-headroom/bin/python -c 'from headroom._core import hello; print(hello
 fi
 
 if ! lsof -i :8789 -sTCP:LISTEN -P -n >/dev/null 2>&1; then
-  nohup .venv-headroom/bin/headroom proxy \
-    --port 8789 \
-    --openai-api-url http://127.0.0.1:15721/v1 \
-    --no-telemetry \
-    --stateless \
-    --no-optimize \
-    > /tmp/headroom_8789.log 2>&1 &
+  nohup .venv-headroom/bin/python headroom/servers/start_headroom_direct.py \
+    > /tmp/headroom_8789_direct.log 2>&1 &
 fi
 
 if ! lsof -i :8790 -sTCP:LISTEN -P -n >/dev/null 2>&1; then
